@@ -12,6 +12,7 @@ WriteMakefile(
     PREREQ_PM => {
 				  'Test::More' => 0,
 				  'ZConf' => 0,
+				  'Curses::UI' => 0,
 				  'File::MimeInfo::Magic' => 0,
 				  'File::MimeInfo::Applications' => 0,
     },

@@ -12,11 +12,11 @@ ZConf::Runner - Run a file using a choosen methode, desktop entry or mimetype.
 
 =head1 VERSION
 
-Version 0.0.0
+Version 0.0.1
 
 =cut
 
-our $VERSION = '0.0.0';
+our $VERSION = '0.0.1';
 
 =head1 SYNOPSIS
 
@@ -33,8 +33,13 @@ on it's mimetype. Currently only files are supported.
 
 This initializes it.
 
-There is only on arg supported currently and that is an hash
-that will be passed directly to ZConf->new.
+One arguement is taken and that is a hash value.
+
+=head3 hash values
+
+=head4 zconf
+
+If this key is defined, this hash will be passed to ZConf->new().
 
     my $zcr=ZConf::Runner->new();
 

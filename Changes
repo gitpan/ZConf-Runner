@@ -1,5 +1,9 @@
 Revision history for ZConf-Runner
 
+0.0.1	2009-01-23/18:30
+		-Add 'Curses::UI' as a requirement in 'Makefile.PL' to appease CPAN's
+			testing.
+
 0.0.0   2009-01-05/13:15
 		-Initial release.
 
