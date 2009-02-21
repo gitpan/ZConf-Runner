@@ -1,5 +1,8 @@
 Revision history for ZConf-Runner
 
+0.1.0	2009-02-20/18:30
+		-Add 'readSet', 'getSet', and 'listSets'.
+
 0.0.1	2009-01-23/18:30
 		-Add 'Curses::UI' as a requirement in 'Makefile.PL' to appease CPAN's
 			testing.

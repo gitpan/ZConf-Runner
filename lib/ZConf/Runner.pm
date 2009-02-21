@@ -12,11 +12,11 @@ ZConf::Runner - Run a file using a choosen methode, desktop entry or mimetype.
 
 =head1 VERSION
 
-Version 0.0.1
+Version 0.1.0
 
 =cut
 
-our $VERSION = '0.0.1';
+our $VERSION = '0.1.0';
 
 =head1 SYNOPSIS
 
@@ -766,6 +766,35 @@ sub getAction{
 	return %returnH;
 }
 
+=head2 getSet
+
+This gets what the current set is.
+
+    my $set=$zcr->getSet;
+    if($zcr->{error}){
+        print "Error!\n";
+    }
+
+=cut
+
+sub getSet{
+	my $self=$_[0];
+
+	my $set=$self->{zconf}->getSet('runner');
+	if($self->{zconf}->{error}){
+		warn('ZConf-Runner listSets:2: ZConf error getting the loaded set the config "runner".'.
+			 ' ZConf error="'.$self->{zconf}->{error}.'" '.
+			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
+		$self->{error}=2;
+		$self->{errorString}='ZConf error getting the loaded set the config "runner".'.
+			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
+			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
+		return undef;
+	}
+
+	return $set;
+}
+
 =head2 listActions
 
 This gets a list of actions for a specific mimetype.
@@ -900,6 +929,38 @@ sub listMimetypes{
 
 	#returns an array of the hash keys
 	return keys(%mimehash);
+}
+
+=head2 listSets
+
+This lists the available sets.
+
+    my @sets=$zcr->listSets;
+    if($zcr->{error}){
+        print "Error!";
+    }
+
+=cut
+
+sub listSets{
+	my $self=$_[0];
+
+	#blanks any previous errors
+	$self->errorBlank;
+
+	my @sets=$self->{zconf}->getAvailableSets('runner');
+	if($self->{zconf}->{error}){
+		warn('ZConf-Runner listSets:2: ZConf error listing sets for the config "runner".'.
+			 ' ZConf error="'.$self->{zconf}->{error}.'" '.
+			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
+		$self->{error}=2;
+		$self->{errorString}='ZConf error listing sets for the config "runner".'.
+			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
+			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
+		return undef;
+	}
+
+	return @sets;
 }
 
 =head2 newRunner
@@ -1074,6 +1135,48 @@ sub mimetypeIsSetup{
 
 	#if we get here, it has not been found
 	return undef;
+}
+
+=head2 readSet
+
+This reads a specific set. If the set specified
+is undef, the default set is read.
+
+    #read the default set
+    $zcr->readSet();
+    if($zcr->{error}){
+        print "Error!\n";
+    }
+
+    #read the set 'someSet'
+    $zcr->readSet('someSet');
+    if($zcr->{error}){
+        print "Error!\n";
+    }
+
+=cut
+
+sub readSet{
+	my $self=$_[0];
+	my $set=$_[1];
+
+	
+	#blanks any previous errors
+	$self->errorBlank;
+
+	$self->{zconf}->read({config=>'runner', set=>$set});
+	if ($self->{zconf}->{error}) {
+		warn('ZConf-Runner readSet:2: ZConf error reading the config "runner".'.
+			 ' ZConf error="'.$self->{zconf}->{error}.'" '.
+			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
+		$self->{error}=2;
+		$self->{errorString}='ZConf error reading the config "runner".'.
+			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
+			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
+		return undef;
+	}
+
+	return 1;
 }
 
 =head2 removeAction
