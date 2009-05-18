@@ -12,11 +12,11 @@ ZConf::Runner - Run a file using a choosen methode, desktop entry or mimetype.
 
 =head1 VERSION
 
-Version 0.1.0
+Version 1.0.0
 
 =cut
 
-our $VERSION = '0.1.0';
+our $VERSION = '1.0.0';
 
 =head1 SYNOPSIS
 
@@ -39,9 +39,7 @@ One arguement is taken and that is a hash value.
 
 =head4 zconf
 
-If this key is defined, this hash will be passed to ZConf->new().
-
-    my $zcr=ZConf::Runner->new();
+This is a zconf object to use instead of initiating a new one.
 
 =cut
 
@@ -54,21 +52,20 @@ sub new{
 	my $self={error=>undef, errorString=>undef};
 	bless $self;
 
-	#this is done to keep from throwing an error when we try to pass it to ZConf->new
 	if (!defined($args{zconf})) {
-		$args{zconf}={};
-	}
-
-	#creates the ZConf object
-	$self->{zconf}=ZConf->new(%{$args{zconf}});
-	if(defined($self->{zconf}->{error})){
-		warn("ZConf-Runner new:1: Could not initiate ZConf. It failed with '"
-			 .$self->{zconf}->{error}."', '".$self->{zconf}->{errorString}."'");
-		$self->{error}=1;
-		$self->{errorString}="Could not initiate ZConf. It failed with '"
-		                      .$self->{zconf}->{error}."', '".
+		#creates the ZConf object
+		$self->{zconf}=ZConf->new(%{$args{zconfargs}});
+		if(defined($self->{zconf}->{error})){
+			warn("ZConf-Runner new:1: Could not initiate ZConf. It failed with '"
+				 .$self->{zconf}->{error}."', '".$self->{zconf}->{errorString}."'");
+			$self->{error}=1;
+			$self->{errorString}="Could not initiate ZConf. It failed with '"
+			.$self->{zconf}->{error}."', '".
 							  $self->{zconf}->{errorString}."'";
-		return $self;
+			return $self;
+		}
+	}else {
+		$self->{zconf}=$args{zconf};
 	}
 
 	#make sure it exists
@@ -212,17 +209,6 @@ The first agruement is the action to be performed. The
 second is the file it is to be performed on. The third
 is an optional hash. It's accepted keys are as below.
 
-=head3 args hash
-
-=head4 useX
-
-This is a boolean value that determines if should spawn
-a xterm instance to when calling ask. The default terminal
-is 'xterm -rv -e', but this can be changed by setting
-'$ENT{TERMINAL}'.
-
-The default is true.
-
     my $returned=$zcr->ask('view', '/tmp/test.rdf', {useX=>0});
     if($zcr->{error}){
         print "Error!\n";
@@ -339,225 +325,6 @@ sub ask{
 
 }
 
-=head2 askGUI
-
-This accepts two arguements. The first is the action and
-the second is the object.
-
-This function exits what ever is running as it is not possible
-of exit Curses::UI's main loop. For a list of what the exit codes
-mean, please see the secion 'EXIT CODES'.
-
-This is not meant to be called really except for by ask.
-
-=cut
-
-sub askGUI{
-	my $self=$_[0];
-	my $action=$_[1];
-	my $object=$_[2];
-
-	#blanks any previous errors
-	$self->errorBlank;
-
-	#gets the mimetype for the object
-	my $mimetype=mimetype($object);
-
-	#this makes sure we got a mimetype
-	if (!defined($mimetype)) {
-		warn('ZConf-Runner ask:12: Could not determime the mimetype for "'.$object.'"');
-		$self->{error}=12;
-		$self->{errorString}='Could not determime the mimetype for "'.$object.'"';
-		exit 12;
-	}
-
-	#get possible applications
-	my ($default, @others) = mime_applications_all($mimetype);
-
-	#builds the desktop entry array and  desktop entry array
-	#the array is used for the values
-	#the hash is used for the the listbox display
-	my @deA;
-	my %deH;
-	my $int=0;
-	#only do the following if it is defined
-	if (defined($default)){
-		$deA[0]=$default->{file};
-		$deA[0]=~s/.*\///;
-		$deA[0]=~s/\.desktop$//;
-		$deA[0]=~s/\n//;
-		
-		$deH{$deA[0]}='*'.$default->get('Name');
-		
-		#we bump this to one as $deA[0] has been setup already
-		$int=1;
-	}
-	my $otherInt=0;
-	while (defined($others[$int])) {
-		$deA[$int]=$others[$otherInt]->{file};
-		$deA[$int]=~s/.*\///;
-		$deA[$int]=~s/\.desktop$//;
-		$deA[$int]=~s/\n//;		
-
-		$deH{$deA[$int]}=$others[$otherInt]->get('Name');
-
-		$otherInt++;
-		$int++;
-	}
-
-	use Curses::UI;
-	my $cui = Curses::UI->new( -clear_on_exit => 1);
-
-	#creates the window
-	my $win = $cui->add('window', 'Window', {});
-
-	#creates the container
-	my $container = $win->add('container', 'Container');
-
-	#creates the label for the subject text entry
-	my $mimetypeLabel=$container->add('mimetypeLabel', 'Label', -y=>0,
-									  -Text=>'Mimetype: '.$mimetype );
-
-	#this is the label for the desktop entry list box
-	my $desktopLBlabel=$container->add('desktopLBlabel', 'Label', -y=>2, -width=>26,
-									   -Text=>'Available Desktop Entries:');
-
-	#this just labels the three items after it as being desktop values
-	my $desktopValues=$container->add('desktopValues', 'Label', -y=>13,
-									   -Text=>'Desktop Entry Values:');
-
-	#the name of the desktop entry
-	my $desktopName=$container->add('desktopName', 'Label', -y=>14, -width=>80,
-									   -Text=>'Name: ');
-
-	#what the desktop entry executes
-	my $desktopExec=$container->add('desktopExec', 'Label', -y=>15, -width=>80,
-									   -Text=>'Exec: ');
-
-	#the comment for the desktop entry
-	my $desktopComment=$container->add('desktopComment', 'Label', -y=>16, -width=>80,
-									   -Text=>'Comment: ');
-
-	#this allows selection of the what desktop entry to use
-	my $desktopLB=$container->add('desktopLB', , 'Listbox', -y=>3,
-								  -width=>30, -height=>8, -border=>1,
-								  -values=>\@deA,
-								  -labels=>\%deH,
-								  -radio=>1,
-								  name=>$desktopName,
-								  exec=>$desktopExec,
-								  comment=>$desktopComment,
-								  -onchange=>sub{
-									  my $self=$_[0];
-									  my $entry = File::DesktopEntry->new($self->get());
-									  $self->{name}->text('Name: '.$entry->get('Name'));
-									  $self->{exec}->text('Exec: '.$entry->get('Exec'));
-									  $self->{comment}->text('Comment: '.$entry->get('Comment'));
-											 }
-								  );
-
-	#sets the selection to the first one
-	if (defined($deA[0])) {
-		$desktopLB->set_selection($deA[0]);
-	}
-
-	#the label for the type
-	my $typeLabel=$container->add('typeLabel', 'Label', -y=>2, -x=>30,
-									   -Text=>'Type:');
-
-	#this is the type
-	my $typeLB=$container->add('typeLB', , 'Listbox', -y=>3, -x=>30,
-								  -width=>'13', -height=>8, -border=>1,
-								  -values=>['desktop', 'exec'],
-								  -labels=>{'desktop'=>'Desktop', 'exec'=>'Exec'},
-								  -radio=>1
-								  );
-	$typeLB->set_selection('desktop'); #default to desktop
-
-	#various notes
-	my $defaultSymbol=$container->add('defaultSymbol', 'Label', -y=>11,
-									   -Text=>'*=default        Exec: %f=file');
-
-	#label the exec
-	my $execLabel=$container->add('execLabel', 'Label', -y=>12,
-									   -Text=>'Exec:');
-
-	#allows the exec to be updated
-	my $execEditor=$container->add('execEditor', 'TextEntry', -y=>12, -x=>6);
-
-	#the various buttons...
-	my $buttons=$container->add('buttons',
-								'Buttonbox',
-								-y=>1,
-								desktopLB=>$desktopLB,
-								typeLB=>$typeLB,
-								exec=>$execEditor,
-								zcr=>$self,
-								mimetype=>$mimetype,
-								action=>$action,
-								-buttons=>[{-label=>'Quit',
-											-value=>'quit',
-											-onpress=>sub{
-												exit 14;
-											},
-											},
-										   {
-											-label=>'Ok',
-											-value=>'ok',
-											-onpress=>sub{
-												my $self=$_[0];
-												my $entry=$self->{desktopLB}->get();
-												my $type=$self->{typeLB}->get();
-												my $exec=$self->{exec}->get();
-												my $mimetype=$self->{mimetype};
-
-												#error if desktop is selected and none
-												#exist or is selected
-												if (($type eq 'desktop') &&
-													!defined($entry)) {
-													warn('ZConf-Runner askGUI:14: No desktop entry'.
-														 'specified or none exists for this mimetype.');
-													#we are not going to set the error or etc here
-													#as we exit.
-													exit 16;
-												}
-												
-												
-												#figures out what the do should be
-												my $do=undef;
-												if ($type eq 'desktop') {
-													$do=$entry;
-												}else {
-													$do=$exec;
-												}
-												
-												#
-												$self->{zcr}->newRunner({
-																		 mimetype=>$mimetype,
-																		 action=>$action,
-																		 type=>$type,
-																		 do=>$do
-																		 }
-																		);
-
-												#checks for any errors
-												if ($self->{zcr}->{error}) {
-													exit 17;
-												}
-												
-												#exit ok
-												exit 15;
-											}
-											}
-										   ]
-								);
-
-	#start the CUI loop...
-	#there is no return outside of exit from here :(
-	$cui->mainloop;
-	return;
-}
-
 =head2 do
 
 This runs takes an file and runs it.
@@ -579,25 +346,6 @@ If this is set to true, exec is used instead of system.
 =head4 ask
 
 If this is set to true, it will
-
-=head4 useX
-
-This is a boolean value that determines if should spawn
-a xterm instance to when calling ask.
-
-The default is true.
-
-    #run it with the edit action, but if it has not been setup,
-    #then don't ask
-    $zcr->do('edit', '/tmp/test.rdf', {ask=>0})
-
-    #run it with the edit action, but if it has not been setup,
-    #then ask
-    $zcr->do('edit', '/tmp/test.rdf', {ask=>1})
-
-    #run it using the edit action... when it is ran it will also use
-    #exec instead of system
-    $zcr->do('edit', '/tmp/test.rdf', {ask=>1, exec=>1})
 
 =cut
 
@@ -660,11 +408,24 @@ sub do{
 			warn('ZConf-Runner do:12: validAction("'.$mimetype.'", "'.$action.'") errored');
 			return undef;		
 		}
-		if (!$self->ask($action, $object, {useX=>$args{useX}})) {
-			warn('ZConf-Runner do: $self->ask("'.$action.'", "'.$object.
+		use ZConf::Runner::GUI;
+		$self->errorBlank;
+		my $zcrg=ZConf::Runner::GUI->new({zcrunner=>$self, zconf=>$self->{zconf}});
+		if ($zcrg->{error}){
+			my $error='ZConf::Runner::GUI->new errored. error="'.
+			          $zcrg->{error}.'" errorString="'.$zcrg->{errorString}.'"';
+			$self->{error}=18;
+			$self->{errorString}=$error;
+			warn('ZConf-Runner do:18: '.$error);
+			return undef;
+		}
+		print "asking...\n";
+		if (!$zcrg->ask({useX=>$args{useX}, object=>$object, action=>$action})) {
+			warn('ZConf-Runner do: $zcrg->ask("'.$action.'", "'.$object.
 				 '", {useX=>"'.$args{useX}.'"}) failed or use quit it');
 			return undef;
 		}
+		print "done asking...\n";
 	}
 
 	#this is the base name for the the variables
@@ -782,7 +543,7 @@ sub getSet{
 
 	my $set=$self->{zconf}->getSet('runner');
 	if($self->{zconf}->{error}){
-		warn('ZConf-Runner listSets:2: ZConf error getting the loaded set the config "runner".'.
+		warn('ZConf-Runner getSet:2: ZConf error getting the loaded set the config "runner".'.
 			 ' ZConf error="'.$self->{zconf}->{error}.'" '.
 			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
 		$self->{error}=2;
@@ -1555,6 +1316,10 @@ Error Code 14 happened when OK was selected.
 =head2 17
 
 'newRunner' errored.
+
+=head2 18
+
+Ask errored.
 
 =head1 AUTHOR
 

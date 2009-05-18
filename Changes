@@ -1,5 +1,8 @@
 Revision history for ZConf-Runner
 
+1.0.0   2009-05-18/13:00
+		-Now has ZConf::GUI support.
+
 0.1.0	2009-02-20/18:30
 		-Add 'readSet', 'getSet', and 'listSets'.
 
