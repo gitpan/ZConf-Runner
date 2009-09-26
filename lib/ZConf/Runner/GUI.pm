@@ -11,11 +11,11 @@ ZConf::Runner::GUI - Various GUI stuff for ZConf::Runner.
 
 =head1 VERSION
 
-Version 0.0.0
+Version 1.0.0
 
 =cut
 
-our $VERSION = '0.0.0';
+our $VERSION = '1.0.0';
 
 =head1 SYNOPSIS
 
@@ -25,7 +25,7 @@ This provides the ask dialog used by ZConf::Runner.
 
     my $zcr=ZConf::Runner->new();
 
-=head1 FUNCTIONS
+=head1 METHODS
 
 =head2 new
 
@@ -40,13 +40,9 @@ One arguement is taken and that is a hash value.
 This is a ZConf::Runner object to use. If it is not specified,
 a new one will be created.
 
-=head4 zconf
-
-This is the ZConf object to use. If it is not specified the one in the
-object for zcrunner will be used. If neither zconf or zcrunner is specified,
-a new one is created.
-
 =head4 zcgui
+
+This is the ZConf::GUI object. If it is not passed, a new one will be created.
 
 =cut
 
@@ -82,11 +78,7 @@ sub new{
 		return $self;		
 	}
 
-	if (!defined($args{zconf})) {
-		$self->{zconf}=$args{zconf};
-	}else {
-		$self->{zconf}=$self->{zcr}->{zconf};
-	}
+	$self->{zconf}=$self->{zcr}->{zconf};
 
 	#initializes the GUI
     $self->{gui}=ZConf::GUI->new({zconf=>$self->{zconf}});
@@ -155,7 +147,7 @@ sub ask{
 
 	$self->errorblank;
 
-	$self->{be}->ask(\%args)
+	$self->{be}->ask(\%args);
 
 }
 

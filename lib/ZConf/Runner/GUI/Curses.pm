@@ -12,11 +12,11 @@ ZConf::Runner::GUI::Curses - Run a file using a choosen methode, desktop entry o
 
 =head1 VERSION
 
-Version 0.0.0
+Version 1.0.0
 
 =cut
 
-our $VERSION = '0.0.0';
+our $VERSION = '1.0.0';
 
 =head1 SYNOPSIS
 
@@ -50,12 +50,6 @@ This is the ZConf::GUI object. A new one will be created if it is
 This is a ZConf::Runner object to use. If it is not specified,
 a new one will be created.
 
-=head4 zconf
-
-This is the ZConf object to use. If it is not specified the one in the
-object for zcrunner will be used. If neither zconf or zcrunner is specified,
-a new one is created.
-
 =cut
 
 sub new{
@@ -74,22 +68,7 @@ sub new{
 		$self->{zcr}=ZConf::Runner->new();
 	}
 
-	#
-	if (defined($args{zconf})) {
-		$self->{zconf}=$self->{zcr}->{zconf};
-	}else {
-		use ZConf;
-		$self->{zconf}=ZConf->new();
-		if(defined($self->{zconf}->{error})){
-			warn("ZConf-GUI new:1: Could not initiate ZConf. It failed with '"
-				 .$self->{zconf}->{error}."', '".$self->{zconf}->{errorString}."'");
-			$self->{error}=1;
-			$self->{errorString}="Could not initiate ZConf. It failed with '"
-			                     .$self->{zconf}->{error}."', '".
-			                     $self->{zconf}->{errorString}."'";
-			return $self;
-		}
-	}
+	$self->{zconf}=$self->{zcr}->{zconf};
 
 	#
 	if (defined($args{useX})) {
@@ -159,7 +138,7 @@ sub ask{
 		#we reread it to get any changes
 		$self->{zconf}->read({config=>'runner'});
 		if ($self->{zconf}->{error}) {
-			warn('ZConf-Runner ask:2: ZConf errored with "'.$self->{zconf}->{error}.
+			warn('ZConf-Runner-GUI-Curses ask:2: ZConf errored with "'.$self->{zconf}->{error}.
 				 '" when trying to reread the ZConf config "runner". errorString="'.
 				 $self->{zconf}->{errorString}.'"');
 			return undef;
@@ -179,7 +158,7 @@ sub ask{
 		system($askcommand);
 		my $exitcode=$? >> 8;
 		if ($? == -1) {
-			warn("ZConf-Runner ask:15: Failed to '".$askcommand."'");
+			warn("ZConf-Runner-GUI-Curses ask:15: Failed to '".$askcommand."'");
 			$self->{error}=15;
 			$self->{errorString}="Failed to '".$askcommand."'";
 			return undef;
@@ -229,7 +208,7 @@ sub askGUI{
 
 	#this makes sure we got a mimetype
 	if (!defined($mimetype)) {
-		warn('ZConf-Runner ask:12: Could not determime the mimetype for "'.$object.'"');
+		warn('ZConf-Runner-GUI-Curses ask:12: Could not determime the mimetype for "'.$object.'"');
 		$self->{error}=12;
 		$self->{errorString}='Could not determime the mimetype for "'.$object.'"';
 		exit 12;

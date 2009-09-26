@@ -1,5 +1,10 @@
 Revision history for ZConf-Runner
 
+2.0.0	2009-09-26/2:00
+		-Remove the 'zconf' value from the arg hash for 'ZConf::Runner::GUI->new'
+			and 'ZConf::Runner::GUI::Curses->new'. It now uses the one from the
+			'ZConf::Runner' object.
+
 1.0.0   2009-05-18/13:00
 		-Now has ZConf::GUI support.
 
