@@ -1,5 +1,9 @@
 Revision history for ZConf-Runner
 
+2.1.1	2009-10-11/4:10
+		-Correct initilization issue with accepting GUI not accepting the arg zcgui.
+		-Add load test for ZConf::Runner::GUI.
+
 2.1.0	2009-10-11/3:40
 		-'bin/zcrunner' will now use the first arguement if -o is not given
 		-Correct documentation in regards to the new method for

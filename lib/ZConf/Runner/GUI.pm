@@ -11,11 +11,11 @@ ZConf::Runner::GUI - Various GUI stuff for ZConf::Runner.
 
 =head1 VERSION
 
-Version 1.0.0
+Version 1.0.1
 
 =cut
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.1';
 
 =head1 SYNOPSIS
 
@@ -57,11 +57,7 @@ sub new{
 
 	#initiates
 	if (!defined($args{zcrunner})) {
-		if (!defined($args{zconf})) {
-			$self->{zcr}=ZConf::Runner->new();
-		}else {
-			$self->{zcr}=ZConf::Runner->new({zconf=>$args{zconf}});
-		}
+		$self->{zcr}=ZConf::Runner->new();
 	}else {
 		$self->{zcr}=$args{zcrunner};
 	}
@@ -80,17 +76,21 @@ sub new{
 
 	$self->{zconf}=$self->{zcr}->{zconf};
 
-	#initializes the GUI
-    $self->{gui}=ZConf::GUI->new({zconf=>$self->{zconf}});
-	if ($self->{gui}->{error}) {
-		my $errorstring=$self->{gui}->{errorString};
-		$errorstring=~s/\"/\\\"/g;
-		my $error='Initializing ZConf::GUI failed. error="'.$self->{gui}->{error}
+	if (!defined($args{zcgui})) {
+		#initializes the GUI
+		$self->{gui}=ZConf::GUI->new({zconf=>$self->{zconf}});
+		if ($self->{gui}->{error}) {
+			my $errorstring=$self->{gui}->{errorString};
+			$errorstring=~s/\"/\\\"/g;
+			my $error='Initializing ZConf::GUI failed. error="'.$self->{gui}->{error}
 		          .'" errorString="'.$self->{gui}->{errorString}.'"';
-	    $self->{error}=2;
-		$self->{errorString}=$error;
-		warn('ZConf-GUI new:2: '.$error);
-		return $self;
+			$self->{error}=2;
+			$self->{errorString}=$error;
+			warn('ZConf-Runner-GUI new:2: '.$error);
+			return $self;
+		}
+	}else {
+		$self->{gui}=$args{zcgui};
 	}
 
 	$self->{useX}=$self->{gui}->useX('ZConf::Runner');
