@@ -12,11 +12,11 @@ ZConf::Runner::GUI::Curses - Run a file using a choosen methode, desktop entry o
 
 =head1 VERSION
 
-Version 1.0.0
+Version 1.0.1
 
 =cut
 
-our $VERSION = '1.0.0';
+our $VERSION = '1.0.1';
 
 =head1 SYNOPSIS
 
@@ -44,6 +44,7 @@ ZConf::GUI->useX is used.
 =head4 zcgui
 
 This is the ZConf::GUI object. A new one will be created if it is
+not passed.
 
 =head4 zcrunner
 

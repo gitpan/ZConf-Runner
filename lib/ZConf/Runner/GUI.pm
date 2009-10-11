@@ -147,8 +147,16 @@ sub ask{
 
 	$self->errorblank;
 
-	$self->{be}->ask(\%args);
+	my $returned=$self->{be}->ask(\%args);
+	if ($self->{be}->{error}) {
+		$self->{error}=5;
+		$self->{errorString}='Backend errored. error="'.$self->{error}.'" '.
+		                     'errorString=>"'.$self->{errorString}.'"';
+		warn('ZConf-Runner-GUI ask:5: '.$self->{errorString});
+		return undef;
+	}
 
+	return $returned;
 }
 
 =head2 dialogs
@@ -217,6 +225,10 @@ Initializing ZConf::Runner failed.
 =head2 4
 
 Failed to initailize the primary backend.
+
+=head2 5
+
+Backend errored.
 
 =head1 AUTHOR
 

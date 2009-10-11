@@ -152,8 +152,11 @@ if (defined($opts{L})) {
 
 #make sure an object was specified
 if (!defined($opts{o})) {
-	warn('zcrunner:1: No object defined');
-	exit 1;
+	if (!defined($ARGV[0])) {
+		warn('zcrunner:1: No object defined');
+		exit 1;
+	}
+	$opts{o}=$ARGV[0];
 }
 
 if ($opts{n}) {

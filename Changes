@@ -1,5 +1,10 @@
 Revision history for ZConf-Runner
 
+2.1.0	2009-10-11/3:40
+		-'bin/zcrunner' will now use the first arguement if -o is not given
+		-Correct documentation in regards to the new method for
+			'ZConf::Runner::GUI::Curses'.
+
 2.0.0	2009-09-26/2:00
 		-Remove the 'zconf' value from the arg hash for 'ZConf::Runner::GUI->new'
 			and 'ZConf::Runner::GUI::Curses->new'. It now uses the one from the

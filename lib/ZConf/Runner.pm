@@ -12,11 +12,11 @@ ZConf::Runner - Run a file using a choosen methode, desktop entry or mimetype.
 
 =head1 VERSION
 
-Version 2.0.0
+Version 2.1.0
 
 =cut
 
-our $VERSION = '2.0.0';
+our $VERSION = '2.1.0';
 
 =head1 SYNOPSIS
 
@@ -419,13 +419,12 @@ sub do{
 			warn('ZConf-Runner do:18: '.$error);
 			return undef;
 		}
-		print "asking...\n";
-		if (!$zcrg->ask({useX=>$args{useX}, object=>$object, action=>$action})) {
-			warn('ZConf-Runner do: $zcrg->ask("'.$action.'", "'.$object.
-				 '", {useX=>"'.$args{useX}.'"}) failed or use quit it');
+		$returned=$zcrg->ask({object=>$object, action=>$action});
+		if (!$returned) {
+			warn('ZConf-Runner do: $zcrg->ask({ action=>"'.$action.'", object=>"'.$object.
+				 '" }) failed or use quit it');
 			return undef;
 		}
-		print "done asking...\n";
 	}
 
 	#this is the base name for the the variables
