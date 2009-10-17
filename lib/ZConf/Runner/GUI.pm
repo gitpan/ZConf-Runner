@@ -109,7 +109,7 @@ sub new{
 
 =head2 ask
 
-This is creates a Curses::UI asking what to do.
+This is creates a dialog window asking what to do.
 
 The first agruement is the action to be performed. The
 second is the file it is to be performed on. The third

@@ -5,6 +5,7 @@ use strict;
 use File::MimeInfo::Magic;
 use File::MimeInfo::Applications;
 use ZConf;
+use String::ShellQuote;
 
 =head1 NAME
 
@@ -12,11 +13,11 @@ ZConf::Runner - Run a file using a choosen methode, desktop entry or mimetype.
 
 =head1 VERSION
 
-Version 2.1.1
+Version 2.1.3
 
 =cut
 
-our $VERSION = '2.1.1';
+our $VERSION = '2.1.3';
 
 =head1 SYNOPSIS
 
@@ -27,7 +28,7 @@ on it's mimetype. Currently only files are supported.
 
     my $zcr=ZConf::Runner->new();
 
-=head1 FUNCTIONS
+=head1 METHODS
 
 =head2 new
 
@@ -448,12 +449,13 @@ sub do{
 
 	#
 	if ($type eq 'exec') {
-		#escapes the object for passing using exec
-		$object=~s/(["`\$\\])/\\$1/g;
-		$object=qq($object);
+		#make the object safe to exchange with %f
+		my $sobject=shell_quote($object);
 
 		#replace %f with the file
-		$do=~s/%f/$object/g;
+		$do=~s/\%f/$sobject/g;
+
+		print "\n\n".$do."\n\n";
 		
 		if($args{exec}){
 			exec($do);

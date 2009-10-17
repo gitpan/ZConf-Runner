@@ -16,6 +16,7 @@ WriteMakefile(
 				  'File::MimeInfo::Magic' => 0,
 				  'File::MimeInfo::Applications' => 0,
 				  'ZConf::GUI'=>0,
+				  'String::ShellQuote'=>0,
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'ZConf-Runner-*' },

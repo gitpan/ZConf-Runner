@@ -1,5 +1,11 @@
 Revision history for ZConf-Runner
 
+2.1.3	2009-10-17/15:00
+		-Now uses 'String::ShellQuote' when it runs a program.
+
+2.1.2	2009-10-11/13:30
+		-Minor pod correction to 'ZConf::Runner::GUI'.
+
 2.1.1	2009-10-11/4:10
 		-Correct initilization issue with accepting GUI not accepting the arg zcgui.
 		-Add load test for ZConf::Runner::GUI.
