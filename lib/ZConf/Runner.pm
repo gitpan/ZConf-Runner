@@ -13,11 +13,11 @@ ZConf::Runner - Run a file using a choosen methode, desktop entry or mimetype.
 
 =head1 VERSION
 
-Version 2.1.3
+Version 2.1.4
 
 =cut
 
-our $VERSION = '2.1.3';
+our $VERSION = '2.1.4';
 
 =head1 SYNOPSIS
 
@@ -27,6 +27,9 @@ on it's mimetype. Currently only files are supported.
     use ZConf::Runner;
 
     my $zcr=ZConf::Runner->new();
+   if($zcr->{error}){
+       print "Error!\n";
+   }
 
 =head1 METHODS
 
@@ -42,6 +45,11 @@ One arguement is taken and that is a hash value.
 
 This is a zconf object to use instead of initiating a new one.
 
+   my $zcr=ZConf::Runner->new();
+   if($zcr->{error}){
+       print "Error!\n";
+   }
+
 =cut
 
 sub new{
@@ -49,20 +57,21 @@ sub new{
 	if(defined($_[1])){
 		%args= %{$_[1]};
 	}
+	my $function='new';
 
-	my $self={error=>undef, errorString=>undef};
+	my $self={error=>undef, errorString=>undef, module=>'ZConf-Runner', perror=>undef};
 	bless $self;
 
 	if (!defined($args{zconf})) {
 		#creates the ZConf object
 		$self->{zconf}=ZConf->new(%{$args{zconfargs}});
 		if(defined($self->{zconf}->{error})){
-			warn("ZConf-Runner new:1: Could not initiate ZConf. It failed with '"
-				 .$self->{zconf}->{error}."', '".$self->{zconf}->{errorString}."'");
 			$self->{error}=1;
+			$self->{perror}=1;
 			$self->{errorString}="Could not initiate ZConf. It failed with '"
-			.$self->{zconf}->{error}."', '".
+			                  .$self->{zconf}->{error}."', '".
 							  $self->{zconf}->{errorString}."'";
+			warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 			return $self;
 		}
 	}else {
@@ -73,41 +82,55 @@ sub new{
 	my $returned = $self->{zconf}->configExists('runner');
 	#if we can't do this we definitely can't continue
 	if ($self->{zconf}->{error}) {
-		warn('ZConf-Runner new:2: Could not verify if "runner" exists or not. ZConf error="'.
-			 $self->{zconf}->{error}.'" ZConf errorString="'.$self->{zconf}->{errorString}.'\" ');
-		return undef;
+		$self->{error}=2;
+		$self->{perror}=1;
+		$self->{errorString}='Could not verify if "runner" exists or not. ZConf error="'.
+			                 $self->{zconf}->{error}.'" ZConf errorString="'.
+							 $self->{zconf}->{errorString}.'"';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		return $self;
 	}
 
 	#create the config if it has not been initialized yet.
 	if (!$returned) {
 		$self->{zconf}->createConfig('runner');
-		#
 		if ($self->{zconf}->{error}) {
-			warn('ZConf-Runner new:3: Could not create the ZConf config "runner". ZConf error with "'.
-			 $self->{zconf}->{error}.'" ZConf errorString="'.$self->{zconf}->{errorString}.'\" ');
-			return undef;
+			$self->{error}=3;
+			$self->{perror}=1;
+			$self->{errorString}='Could not create the ZConf config "runner". ZConf error with "'.
+			                     $self->{zconf}->{error}.'" ZConf errorString="'.
+								 $self->{zconf}->{errorString}.'"';
+			warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+ 			return $self;
 		}
+	}
 
+	#create the new set if needed
+	$returned=$self->{zconf}->defaultSetExists('runner');
+	if (!$returned) {
 		#
-		$self->{zconf}->writeSetFromHash({config=>'runner'});
+		$self->{zconf}->writeSetFromHash({config=>'runner'}, {});
 		if ($self->{zconf}->{error}) {
-			warn('ZConf-Runner init:2: ZConf error. error="'.$self->{zconf}->{error}.'" '.
-				 ' errorString="'.$self->{zconf}->{errorString}.'"');
 			$self->{error}=2;
+			$self->{perror}=1;
 			$self->{errorString}='ZConf error. error="'.$self->{zconf}->{error}.'" '.
 			                     ' errorString="'.$self->{zconf}->{errorString}.'"';
-			return undef;
+			warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			return $self;
 		}
 	}
 
 	#
 	$self->{zconf}->read({config=>'runner'});
 	if ($self->{zconf}->{error}) {
-		warn('ZConf-Runner new:2: Could read ZConf config "runner". ZConf error="'.
-			 $self->{zconf}->{error}.'" ZConf errorString="'.$self->{zconf}->{errorString}.'\" ');
-		return undef;
+		$self->{error}=2;
+		$self->{perror}=1;
+		$self->{errorString}='ZConf error. error="'.$self->{zconf}->{error}.'" '.
+		                     ' errorString="'.$self->{zconf}->{errorString}.'"';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		return $self;
 	}
-
+		
 	return $self;
 }
 
@@ -136,30 +159,34 @@ sub actionIsSetup{
 	my $self=$_[0];
 	my $mimetype=$_[1];
 	my $action=$_[2];
+	my $function='acionIsSetup';
 
 	#blanks any previous errors
 	$self->errorBlank;	
+	if ($self->{error}) {
+		return undef;
+	}
 
 	#makes sure a mimetype to check for is specified.
 	if (!defined($mimetype)) {
-		warn('ZConf-Runner actionIsSetup:4: No mimetype specified');
 		$self->{error}=4;
 		$self->{errorString}='No mimetype specified';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
 	#makes sure a action to check for is specified.
 	if (!defined($action)) {
-		warn('ZConf-Runner actionIsSetup:4: No action specified');
 		$self->{error}=4;
 		$self->{errorString}='No action specified';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
 	if (!$self->validActionName($action)) {
-		warn('ZConf-Runner actionIsSetup:5: "'.$action.'" is not a valid action name');
 		$self->{error}=5;
 		$self->{errorString}='"'.$action.'" is not a valid action name';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 	}
 
 	#check to make sure the mimetype is setup
@@ -172,9 +199,9 @@ sub actionIsSetup{
 
 	#return if it if the mimetype is not setup
 	if (!$returned) {
-		warn('ZConf-Runner actionIsSetup:7: "'.$mimetype.'" is not setup');
 		$self->{error}=7;
 		$self->{errorString}='"'.$mimetype.'" is not setup';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -229,17 +256,22 @@ sub ask{
 	if (defined($_[3])) {
 		%args= %{$_[3]};
 	}
+	my $function='ask';
+
 	#blanks any previous errors
 	$self->errorBlank;
+	if ($self->{error}) {
+		return undef;
+	}
 
 	#gets the mimetype for the object
 	my $mimetype=mimetype($object);
 
 	#this makes sure we got a mimetype
 	if (!defined($mimetype)) {
-		warn('ZConf-Runner ask:12: Could not determime the mimetype for "'.$object.'"');
 		$self->{error}=12;
 		$self->{errorString}='Could not determime the mimetype for "'.$object.'"';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;;
 	}
 
@@ -271,10 +303,10 @@ sub ask{
 	if ($args{useX}) {
 		system($terminal.' '.$askcommand);
 		if ($? == -1) {
-			warn("ZConf-Runner ask:15: Failed to '".$terminal.' '.$askcommand."'");
 			$self->{error}=15;
 			$self->{errorString}="Failed to '".$terminal.' '.$askcommand."'";
-			return undef;
+			warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		 	return undef;
 		}
 
 		#we reread it to get any changes
@@ -300,9 +332,9 @@ sub ask{
 		system($askcommand);
 		my $exitcode=$? >> 8;
 		if ($? == -1) {
-			warn("ZConf-Runner ask:15: Failed to '".$askcommand."'");
 			$self->{error}=15;
 			$self->{errorString}="Failed to '".$askcommand."'";
+			warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 			return undef;
 		}
 
@@ -317,10 +349,9 @@ sub ask{
 		}
 
 		#if we get here, it means we errored
-		warn("ZConf-Runner ask:16: '".$askcommand."' failed with a exit of '".
-			 $exitcode."'");
 		$self->{error}=16;
 		$self->{errorString}="'".$askcommand."' failed with a exit of '".$exitcode."'";
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -361,15 +392,19 @@ sub do{
 	if (defined($_[3])) {
 		%args= %{$_[3]};
 	}
+	my $function='do';
 
 	#blanks any previous errors
 	$self->errorBlank;
+	if ($self->{error}) {
+		return undef;
+	}
 
 	#makes sure a object to operate on is specified.
 	if (!defined($object)) {
-		warn('ZConf-Runner do:4: No object specified');
 		$self->{error}=4;
 		$self->{errorString}='No object specified';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -385,9 +420,9 @@ sub do{
 
 	#makes sure an action is specified.
 	if (!defined($action)) {
-		warn('ZConf-Runner do:4: No action specified');
 		$self->{error}=4;
 		$self->{errorString}='No action specified';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -396,9 +431,9 @@ sub do{
 
 	#this makes sure we got a mimetype
 	if (!defined($mimetype)) {
-		warn('ZConf-Runner do:12: Could not determime the mimetype for "'.$object.'"');
 		$self->{error}=12;
 		$self->{errorString}='Could not determime the mimetype for "'.$object.'"';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -417,13 +452,13 @@ sub do{
 			          $zcrg->{error}.'" errorString="'.$zcrg->{errorString}.'"';
 			$self->{error}=18;
 			$self->{errorString}=$error;
-			warn('ZConf-Runner do:18: '.$error);
+			warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 			return undef;
 		}
 		$returned=$zcrg->ask({object=>$object, action=>$action});
 		if (!$returned) {
 			warn('ZConf-Runner do: $zcrg->ask({ action=>"'.$action.'", object=>"'.$object.
-				 '" }) failed or use quit it');
+				 '" }) failed or user quit it');
 			return undef;
 		}
 	}
@@ -434,13 +469,11 @@ sub do{
 	#gets the variables for the action
 	my %vars=$self->{zconf}->regexVarGet('runner', '^'.$baseVar);
 	if($self->{zconf}->{error}){
-		warn('ZConf-Runner do:1: ZConf error when doing regexVarGet for "^'.$baseVar
-			 .'". ZConf error="'.$self->{zconf}->{error}.'" '.
-			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
 		$self->{error}=1;
 		$self->{errorString}='ZConf error when doing regexVarGet for "^'.$baseVar
 		                     .'". ZConf error="'.$self->{zconf}->{error}.'" '.
 			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -469,9 +502,9 @@ sub do{
 	if ($type eq 'desktop') {
 		#verify it is a good desktop entry
 		if (!$self->validDesktopEntry($do)) {
-			warn('ZConf-Runner do:13: $entry->lookup("'.$do.'") failed');
 			$self->{error}=13;
 			$self->{errorString}='$entry->lookup("'.$do.'") failed';
+			warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 			return undef;
 		}
 
@@ -505,6 +538,13 @@ sub getAction{
 	my $self=$_[0];
 	my $mimetype=$_[1];
 	my $action=$_[2];
+	my $function='getAction';
+
+	$self->errorBlank;
+	if ($self->{error}) {
+		return undef;
+	}
+
 
 	if (!defined($self->validAction($mimetype, $action))) {
 		#we don't need to set any errors or etc here as validAction will
@@ -541,16 +581,20 @@ This gets what the current set is.
 
 sub getSet{
 	my $self=$_[0];
+	my $function='getSet';
+
+	$self->errorBlank;
+	if ($self->{error}) {
+		return undef;
+	}
 
 	my $set=$self->{zconf}->getSet('runner');
 	if($self->{zconf}->{error}){
-		warn('ZConf-Runner getSet:2: ZConf error getting the loaded set the config "runner".'.
-			 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
 		$self->{error}=2;
 		$self->{errorString}='ZConf error getting the loaded set the config "runner".'.
 			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
 			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -573,15 +617,19 @@ There is one required arguement and it is the mimetype.
 sub listActions{
 	my $self=$_[0];
 	my $mimetype=$_[1];
+	my $function='listActions';
 
 	#blanks any previous errors
 	$self->errorBlank;
+	if ($self->{error}) {
+		return undef;
+	}
 
 	#makes sure a type to check for is specified.
 	if (!defined($mimetype)) {
-		warn('ZConf-Runner listActions:4: No mimetype specified to get actions for');
 		$self->{error}=4;
 		$self->{errorString}='No mimetype specified to get actions for.';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -594,22 +642,20 @@ sub listActions{
 
 	#error if the mimetype is not setup
 	if (!$returned) {
-		warn('ZConf-Runner getActions:7: Mimetype "'.$mimetype.'" is not setup');
 		$self->{error}=7;
 		$self->{errorString}='Mimetype "'.$mimetype.'" is not setup';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
 	#finds any thing under 'mimetypes/'.$mimetype.'/'
 	my @actionSearch=$self->{zconf}->regexVarSearch('runner', '^mimetypes/'.$mimetype.'/');
 	if($self->{zconf}->{error}){
-		warn('ZConf-Runner listActions:1: ZConf error when searching for vars matching'.
-			 ' "^mimetypes/". ZConf error="'.$self->{zconf}->{error}.'" '.
-			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
 		$self->{error}=1;
 		$self->{errorString}=' ZConf error when searching for vars matching'.
 		                     ' "^mimetypes/". ZConf error="'.$self->{zconf}->{error}.'" '.
 		                     'ZConf error string="'.$self->{zconf}->{errorString}.'"';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -652,20 +698,22 @@ The are no arguements for this.
 
 sub listMimetypes{
 	my $self=$_[0];
+	my $function='listMimetypes';
 
 	#blanks any previous errors
 	$self->errorBlank;
+	if ($self->{error}) {
+		return undef;
+	}
 
 	#
 	my @mimetypes=$self->{zconf}->regexVarSearch('runner', '^mimetypes/');
 	if($self->{zconf}->{error}){
-		warn('ZConf-Runner listMimetype:1: ZConf error when searching for vars matching'.
-			 ' "^mimetypes/". ZConf error="'.$self->{zconf}->{error}.'" '.
-			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
 		$self->{error}=1;
 		$self->{errorString}=' ZConf error when searching for vars matching'.
 		                     ' "^mimetypes/". ZConf error="'.$self->{zconf}->{error}.'" '.
 		                     'ZConf error string="'.$self->{zconf}->{errorString}.'"';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -706,19 +754,21 @@ This lists the available sets.
 
 sub listSets{
 	my $self=$_[0];
+	my $function='listSets';
 
 	#blanks any previous errors
 	$self->errorBlank;
+	if ($self->{error}) {
+		return undef;
+	}
 
 	my @sets=$self->{zconf}->getAvailableSets('runner');
 	if($self->{zconf}->{error}){
-		warn('ZConf-Runner listSets:2: ZConf error listing sets for the config "runner".'.
-			 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
 		$self->{error}=2;
 		$self->{errorString}='ZConf error listing sets for the config "runner".'.
 			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
 			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -765,9 +815,13 @@ sub newRunner{
 	if(defined($_[1])){
 		%args= %{$_[1]};
 	}
+	my $function='newRunner';
 
 	#blanks any previous errors
 	$self->errorBlank;
+	if ($self->{error}) {
+		return undef;
+	}
 
 	#the required arguements
 	my @reqArgs=('mimetype', 'action', 'type', 'do');
@@ -781,6 +835,8 @@ sub newRunner{
 				 $reqArgs[$reqArgsInt].'" is not defined.');
 			$self->{error}=4;
 			$self->{errorString}='The arg "'.$reqArgs[$reqArgsInt].'" is not defined.';
+			warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+			return undef;
 		}
 
 		$reqArgsInt++;
@@ -788,29 +844,29 @@ sub newRunner{
 
 	#make type is a legit value
 	if ((!$args{type} eq 'desktop') && (!$args{type} eq 'exec')) {
-		warn('ZConf-Runner newRunner:6: Type is not equal to "desktop" or "exec"');
 		$self->{error}=6;
 		$self->{errorString}='Type is not equal to "desktop" or "exec"';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		return undef;
 	}
 
 	#makes sure that the action is a valid name
 	if (!$self->validActionName($args{action})) {
-		warn('ZConf-Runner newRunner:5: "'.$args{action}.'" is not a valid name');
 		$self->{error}=5;
 		$self->{errorString}='"'.$args{action}.'" is not a valid name';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+		return undef;
 	}
 
 	#sets the type
 	$self->{zconf}->setVar('runner', 'mimetypes/'.$args{mimetype}.'/'.
 						   $args{action}.'/type', $args{type});
 	if($self->{zconf}->{error}){
-		warn('ZConf-Runner newRunner:1: ZConf error when writing the config "runner".'.
-			 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
 		$self->{error}=1;
 		$self->{errorString}='ZConf error when writing the config "runner".'.
 			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
 			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -818,26 +874,22 @@ sub newRunner{
 	$self->{zconf}->setVar('runner', 'mimetypes/'.$args{mimetype}.'/'.
 						   $args{action}.'/do', $args{do});
 	if($self->{zconf}->{error}){
-		warn('ZConf-Runner newRunner:1: ZConf error when writing the config "runner".'.
-			 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
 		$self->{error}=1;
 		$self->{errorString}='ZConf error when writing the config "runner".'.
 			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
 			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
-		return undef;
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
+ 		return undef;
 	}
 
 	#writes it
 	$self->{zconf}->writeSetFromLoadedConfig({config=>'runner'});
 	if($self->{zconf}->{error}){
-		warn('ZConf-Runner newRunner:1: ZConf error when writing the config "runner".'.
-			 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
 		$self->{error}=1;
 		$self->{errorString}='ZConf error when writing the config "runner".'.
 			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
 			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -864,15 +916,19 @@ is accepted. It is a string containing the name of mimetype.
 sub mimetypeIsSetup{
 	my $self=$_[0];
 	my $mimetype=$_[1];
+	my $function='mimetypeIsSetup';
 
 	#blanks any previous errors
 	$self->errorBlank;
+	if ($self->{error}) {
+		return undef;
+	}
 
 	#makes sure a type to check for is specified.
 	if (!defined($mimetype)) {
-		warn('ZConf-Runner mimetypeIsSetup:4: No mimetype specified');
 		$self->{error}=4;
 		$self->{errorString}='No mimetype specified';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -921,20 +977,21 @@ is undef, the default set is read.
 sub readSet{
 	my $self=$_[0];
 	my $set=$_[1];
-
+	my $function='readSet';
 	
 	#blanks any previous errors
 	$self->errorBlank;
+	if ($self->{error}) {
+		return undef;
+	}
 
 	$self->{zconf}->read({config=>'runner', set=>$set});
 	if ($self->{zconf}->{error}) {
-		warn('ZConf-Runner readSet:2: ZConf error reading the config "runner".'.
-			 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
 		$self->{error}=2;
 		$self->{errorString}='ZConf error reading the config "runner".'.
 			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
 			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -959,23 +1016,27 @@ sub removeAction{
 	my $self=$_[0];
 	my $mimetype=$_[1];
 	my $action=$_[2];
+	my $function='removeAction';
 
 	#blanks any previous errors
 	$self->errorBlank;
+	if ($self->{error}) {
+		return undef;
+	}
 
 	#makes sure a mimetype to check for is specified.
 	if (!defined($mimetype)) {
-		warn('ZConf-Runner validAction:4: No mimetype specified');
 		$self->{error}=4;
 		$self->{errorString}='No mimetype specified';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
 	#makes sure a action to check for is specified.
 	if (!defined($action)) {
-		warn('ZConf-Runner validAction:4: No action specified');
 		$self->{error}=4;
 		$self->{errorString}='No action specified';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -987,28 +1048,23 @@ sub removeAction{
 	#gets the variables for it
 	my %vars=$self->{zconf}->regexVarDel('runner', '^'.$baseVar);
 	if ($self->{zconf}->{error}) {
-		warn('ZConf-Runner removeAction:2: ZConf error for '.
-			 '$self->{zconf}->regexVarDel("runner", "^'.$baseVar.')'.
-			 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
 		$self->{error}=2;
 		$self->{errorString}='ZConf error for '.
 		                     '$self->{zconf}->regexVarDel("runner", "^'.$baseVar.'). '.
 			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
 			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
 	#writes it
 	$self->{zconf}->writeSetFromLoadedConfig({config=>'runner'});
 	if($self->{zconf}->{error}){
-		warn('ZConf-Runner newRunner:1: ZConf error when writing the config "runner".'.
-			 ' ZConf error="'.$self->{zconf}->{error}.'" '.
-			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
 		$self->{error}=2;
 		$self->{errorString}='ZConf error when writing the config "runner".'.
 			                 ' ZConf error="'.$self->{zconf}->{error}.'" '.
 			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -1031,23 +1087,27 @@ sub validAction{
 	my $self=$_[0];
 	my $mimetype=$_[1];
 	my $action=$_[2];
+	my $function='validAction';
 
 	#blanks any previous errors
 	$self->errorBlank;
+	if ($self->{error}) {
+		return undef;
+	}
 
 	#makes sure a mimetype to check for is specified.
 	if (!defined($mimetype)) {
-		warn('ZConf-Runner validAction:4: No mimetype specified');
 		$self->{error}=4;
 		$self->{errorString}='No mimetype specified';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
 	#makes sure a action to check for is specified.
 	if (!defined($action)) {
-		warn('ZConf-Runner validAction:4: No action specified');
 		$self->{error}=4;
 		$self->{errorString}='No action specified';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -1061,9 +1121,9 @@ sub validAction{
 
 	#if it is false then the action is not setup
 	if (!$returned) {
-		warn('ZConf-Runner validAction:8: "'.$action.'" is not configured');
 		$self->{error}=8;
 		$self->{errorString}='"'.$action.'" is not configured';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -1073,38 +1133,36 @@ sub validAction{
 	#gets the variables for it
 	my %vars=$self->{zconf}->regexVarGet('runner', '^'.$baseVar);
 	if($self->{zconf}->{error}){
-		warn('ZConf-Runner newRunner:1: ZConf error when doing regexVarGet for "^'.$baseVar
-			 .'". ZConf error="'.$self->{zconf}->{error}.'" '.
-			 'ZConf error string="'.$self->{zconf}->{errorString}.'"');
 		$self->{error}=1;
 		$self->{errorString}='ZConf error when doing regexVarGet for "^'.$baseVar
 		                     .'". ZConf error="'.$self->{zconf}->{error}.'" '.
 			                 'ZConf error string="'.$self->{zconf}->{errorString}.'"';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
 	#makes sure type is defined
 	if (!defined($vars{$baseVar.'type'})) {
-		warn('ZConf-Runner validAction:9: "'.$baseVar.'type" is not defined');
 		$self->{error}=9;
 		$self->{errorString}='"'.$baseVar.'type" is not defined';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
 	#make sure type is a valid value
 	if (($vars{$baseVar.'type'} ne 'exec') &&
 		($vars{$baseVar.'type'} ne 'desktop')) {
-		warn('ZConf-Runner validAction:9: "'.$baseVar.'type" is not a valid type');
 		$self->{error}=10;
 		$self->{errorString}='"'.$baseVar.'type" is not a valid type';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
 	#makes sure type is defined
 	if (!defined($vars{$baseVar.'do'})) {
-		warn('ZConf-Runner validAction:9: "'.$baseVar.'do" is not defined');
 		$self->{error}=11;
 		$self->{errorString}='"'.$baseVar.'do" is not defined';
+		warn($self->{module}.' '.$function.':'.$self->{error}.': '.$self->{errorString});
 		return undef;
 	}
 
@@ -1128,6 +1186,12 @@ a boolean value.
 sub validActionName{
 	my $self=$_[0];
 	my $name=$_[1];
+	my $function='validActionName';
+
+	$self->errorBlank;
+	if ($self->{error}) {
+		return undef;
+	}
 
 	#Makes sure it does not contain any forward slashes.
 	if ($name =~ /\//) {
@@ -1165,6 +1229,12 @@ a boolean value.
 sub validDesktopEntry{
 	my $self=$_[0];
 	my $app=$_[1];
+	my $function='validDesktopEntry';
+
+	$self->errorBlank;
+	if ($self->{error}) {
+		return undef;
+	}
 
 	#we don't pass any thing to new to prevent it from erroring...
 	#File::DesktopEntry is buggy and will exit upon a failure in the new function...
@@ -1200,6 +1270,12 @@ a boolean value.
 
 sub Xavailable{
 	my $self=$_[0];
+	my $function='Xavailable';
+
+	$self->errorBlank;
+	if ($self->{error}) {
+		return undef;
+	}
 
 	#exists non-zero if it fails
 	system('xhost > /dev/null');
@@ -1226,6 +1302,13 @@ It does the following.
 #blanks the error flags
 sub errorBlank{
         my $self=$_[0];
+		my $function='errorBlank';
+
+		if ($self->{perror}) {
+			warn($self->{error}.' '.$function.': A permanent error is set. error="'.
+				 $self->{error}.'" errorString="'.$self->{errorSting}.'"');
+			return undef;
+		}
 
         $self->{error}=undef;
         $self->{errorString}="";
@@ -1234,6 +1317,10 @@ sub errorBlank{
 }
 
 =head1 ERROR CODES
+
+The error code is contianed in $zcr->{error} and a extended description can be
+found in $zcr->{errorString}. If any module ever sets $zcr->{perror} then the error
+is permanent and none of the methods are usable.
 
 =head2 1
 

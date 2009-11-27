@@ -51,8 +51,9 @@ sub new{
 	if(defined($_[1])){
 		%args= %{$_[1]};
 	}
+	my $function='new';
 
-	my $self={error=>undef, errorString=>undef};
+	my $self={error=>undef, errorString=>undef, module=>'ZConf-Runner-GUI'};
 	bless $self;
 
 	#initiates
